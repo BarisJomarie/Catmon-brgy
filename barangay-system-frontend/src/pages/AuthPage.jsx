@@ -111,9 +111,11 @@ const AuthPage = ({ onLogin }) => {
     <Box
       sx={{
         minHeight: '100vh',
+        width: '100vw',
         bgcolor: '#f5f5f5',
         display: 'flex',
         alignItems: 'center',
+        justifyContent: 'center',
       }}
     >
       <Grid container justifyContent="center">

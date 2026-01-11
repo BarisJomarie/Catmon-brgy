@@ -24,6 +24,7 @@ import {
   IconButton,
   InputAdornment,
   TablePagination,
+  Autocomplete,
 } from '@mui/material';
 import EditIcon from '@mui/icons-material/Edit';
 import DeleteIcon from '@mui/icons-material/Delete';
@@ -55,11 +56,14 @@ const initialForm = {
 const IncidentsPage = () => {
   const [residents, setResidents] = useState([]);
   const [incidents, setIncidents] = useState([]);
+
+  const [addOpen, setAddOpen] = useState(false);
   const [form, setForm] = useState(initialForm);
 
   const [dateFrom, setDateFrom] = useState('');
   const [dateTo, setDateTo] = useState('');
   const [statusFilter, setStatusFilter] = useState('All');
+  const [incidentFilter, setIncidentFilter] = useState('All');
   const [searchText, setSearchText] = useState('');
 
   const [loading, setLoading] = useState(false);
@@ -109,6 +113,10 @@ const IncidentsPage = () => {
     fetchIncidents();
   }, []);
 
+  const handleAddClick = () => {
+    setAddOpen(true);
+  }
+
   const handleChange = (e) => {
     const { name, value } = e.target;
     setForm((prev) => ({ ...prev, [name]: value }));
@@ -128,6 +136,7 @@ const IncidentsPage = () => {
       await api.post('/incidents', form);
       setForm(initialForm);
       await fetchIncidents();
+      setAddOpen(false);
     } catch (err) {
       console.error(err);
       setErrorForm(err.response?.data?.message || 'Error saving incident');
@@ -135,6 +144,10 @@ const IncidentsPage = () => {
       setSaving(false);
     }
   };
+
+  const handleAddClose = () => {
+    setAddOpen(false);
+  }
 
   const residentName = (id) => {
     const r = residents.find((x) => x.id === id);
@@ -157,18 +170,19 @@ const IncidentsPage = () => {
     const matchFrom = !dateFrom || dateOnly >= dateFrom;
     const matchTo = !dateTo || dateOnly <= dateTo;
     const matchStatus = statusFilter === 'All' || i.status === statusFilter;
+    const matchIncident = incidentFilter === 'All' || i.incident_type === incidentFilter;
 
     // searchType/Location/Names
     const complainant = residentName(i.complainant_id);
     const respondent = residentName(i.respondent_id);
     const haystack = (
-      `${i.incident_type || ''} ${i.location || ''} ${complainant} ${respondent}`
+      `${i.location || ''} ${complainant} ${respondent}`
     ).toLowerCase();
     const matchSearch =
       !searchText.trim() ||
       haystack.includes(searchText.trim().toLowerCase());
 
-    return matchFrom && matchTo && matchStatus && matchSearch;
+    return matchFrom && matchTo && matchStatus && matchSearch && matchIncident;
   });
 
   const pagedIncidents = filteredIncidents.slice(
@@ -257,275 +271,301 @@ const IncidentsPage = () => {
 
   return (
     <Box>
-      <Typography variant="h5" gutterBottom>
-        Incident Reports / Blotter
-      </Typography>
-
-      {/* Add Incident */}
-      <Paper sx={{ p: 2, mb: 3 }} elevation={2}>
-        <Typography variant="h6" gutterBottom>
-          Add Incident
-        </Typography>
-        <Box component="form" onSubmit={handleSubmit} noValidate>
-          <Grid container spacing={2}>
-            <Grid item xs={12} md={4}>
-              <TextField
-                type="datetime-local"
-                label="Date & Time"
-                name="incident_date"
-                value={form.incident_date}
-                onChange={handleChange}
-                fullWidth
-                required
-                InputLabelProps={{ shrink: true }}
-              />
-            </Grid>
-            <Grid item xs={12} md={4}>
-              <FormControl fullWidth required>
-                <InputLabel>Incident Type</InputLabel>
-                <Select
-                  label="Incident Type"
-                  name="incident_type"
-                  value={form.incident_type}
-                  onChange={handleChange}
-                >
-                  {INCIDENT_TYPES.map((type) => (
-                    <MenuItem key={type} value={type}>
-                      {type}
-                    </MenuItem>
-                  ))}
-                </Select>
-              </FormControl>
-            </Grid>
-            <Grid item xs={12} md={4}>
-              <TextField
-                label="Location"
-                name="location"
-                value={form.location}
-                onChange={handleChange}
-                fullWidth
-              />
-            </Grid>
-
-            <Grid item xs={12} md={6}>
-              <FormControl fullWidth>
-                <InputLabel>Complainant</InputLabel>
-                <Select
-                  label="Complainant"
-                  name="complainant_id"
-                  value={form.complainant_id}
-                  onChange={handleChange}
-                >
-                  <MenuItem value="">
-                    <em>None</em>
-                  </MenuItem>
-                  {residents.map((r) => (
-                    <MenuItem key={r.id} value={r.id}>
-                      {r.last_name}, {r.first_name}
-                    </MenuItem>
-                  ))}
-                </Select>
-              </FormControl>
-            </Grid>
-            <Grid item xs={12} md={6}>
-              <FormControl fullWidth>
-                <InputLabel>Respondent</InputLabel>
-                <Select
-                  label="Respondent"
-                  name="respondent_id"
-                  value={form.respondent_id}
-                  onChange={handleChange}
-                >
-                  <MenuItem value="">
-                    <em>None</em>
-                  </MenuItem>
-                  {residents.map((r) => (
-                    <MenuItem key={r.id} value={r.id}>
-                      {r.last_name}, {r.first_name}
-                    </MenuItem>
-                  ))}
-                </Select>
-              </FormControl>
-            </Grid>
-
-            <Grid item xs={12} md={6}>
-              <FormControl fullWidth>
-                <InputLabel>Status</InputLabel>
-                <Select
-                  label="Status"
-                  name="status"
-                  value={form.status}
-                  onChange={handleChange}
-                >
-                  {STATUS_OPTIONS.map((s) => (
-                    <MenuItem key={s} value={s}>
-                      {s}
-                    </MenuItem>
-                  ))}
-                </Select>
-              </FormControl>
-            </Grid>
-
-            <Grid item xs={12}>
-              <TextField
-                label="Description"
-                name="description"
-                value={form.description}
-                onChange={handleChange}
-                fullWidth
-                multiline
-                minRows={3}
-                maxRows={6}
-              />
-            </Grid>
-
-            {errorForm && (
-              <Grid item xs={12}>
-                <Typography color="error" variant="body2">
-                  {errorForm}
-                </Typography>
-              </Grid>
-            )}
-
-            <Grid item xs={12}>
-              <Button type="submit" variant="contained" disabled={saving}>
-                {saving ? 'Saving...' : 'Save Incident'}
-              </Button>
-            </Grid>
-          </Grid>
-        </Box>
-      </Paper>
-
-      {/* Incident List */}
-      <Paper sx={{ p: 2 }} elevation={2}>
-        <Box
-          sx={{
-            display: 'flex',
-            flexWrap: 'wrap',
-            gap: 2,
-            mb: 2,
-            alignItems: 'center',
-          }}
-        >
-          <Typography variant="h6">Incident List</Typography>
-          <TextField
-            type="date"
-            size="small"
-            label="From"
-            value={dateFrom}
-            onChange={(e) => setDateFrom(e.target.value)}
-            InputLabelProps={{ shrink: true }}
-          />
-          <TextField
-            type="date"
-            size="small"
-            label="To"
-            value={dateTo}
-            onChange={(e) => setDateTo(e.target.value)}
-            InputLabelProps={{ shrink: true }}
-          />
-          <FormControl size="small" sx={{ minWidth: 150 }}>
-            <InputLabel>Status</InputLabel>
-            <Select
-              label="Status"
-              value={statusFilter}
-              onChange={(e) => setStatusFilter(e.target.value)}
+      <Box sx={{ display: 'flex', gap: 2}}>
+        <Box sx={{ maxWidth: '20vw', minWidth: 200 }}>
+          <Button 
+            variant='contained' 
+            disabled={addOpen} 
+            onClick={() => handleAddClick()}
+            size='large'
+            sx={{mb: 2, width: '100%'}}
             >
-              <MenuItem value="All">All</MenuItem>
-              {STATUS_OPTIONS.map((s) => (
-                <MenuItem key={s} value={s}>
-                  {s}
-                </MenuItem>
-              ))}
-            </Select>
-          </FormControl>
-          <TextField
-            size="small"
-            label="Search (type / location / name)"
-            value={searchText}
-            onChange={(e) => setSearchText(e.target.value)}
-            sx={{ minWidth: 260 }}
-            InputProps={{
-              endAdornment: (
-                <InputAdornment position="end">
-                  <SearchIcon fontSize="small" />
-                </InputAdornment>
-              ),
-            }}
-          />
+            Add Incident
+          </Button>
+          <Paper sx={{ p: 2 }} elevation={2}>
+            <Typography variant="h6" sx={{mb: 2}} gutterBottom>Filter</Typography>
+            <Box flexGrow={1}>
+              <Grid container spacing={2}>
+                <Grid size={{xs: 12, md: 12}}>
+                  <TextField
+                    size="small"
+                    label="Search (location / name)"
+                    value={searchText}
+                    onChange={(e) => setSearchText(e.target.value)}
+                    fullWidth
+                    InputProps={{
+                      endAdornment: (
+                        <InputAdornment position="end">
+                          <SearchIcon fontSize="small" />
+                        </InputAdornment>
+                      ),
+                    }}
+                  />
+                </Grid>
+                <Grid size={{xs: 12, md: 6}}>
+                  <TextField
+                    type="date"
+                    size="small"
+                    label="From"
+                    value={dateFrom}
+                    onChange={(e) => setDateFrom(e.target.value)}
+                    fullWidth
+                    InputLabelProps={{ shrink: true }}
+                  />
+                </Grid>
+                <Grid size={{xs: 12, md: 6}}>
+                  <TextField
+                    type="date"
+                    size="small"
+                    label="To"
+                    value={dateTo}
+                    onChange={(e) => setDateTo(e.target.value)}
+                    fullWidth
+                    InputLabelProps={{ shrink: true }}
+                  />
+                </Grid>
+                <Grid size={{xs: 12, md: 6}}>
+                  <TextField
+                    select
+                    label="Status"
+                    name="status"
+                    size='small'
+                    value={statusFilter}
+                    onChange={(e) => setStatusFilter(e.target.value)}
+                    fullWidth
+                  >
+                    <MenuItem value="All">All</MenuItem>
+                    {STATUS_OPTIONS.map((s) => (
+                      <MenuItem key={s} value={s}>
+                        {s}
+                      </MenuItem>
+                    ))}
+                  </TextField>
+                </Grid>
+                <Grid size={{xs: 12, md: 6}}>
+                  <TextField
+                    select
+                    label="Incident Type"
+                    name="incident_type"
+                    size='small'
+                    value={incidentFilter}
+                    onChange={(e) => setIncidentFilter(e.target.value)}
+                    fullWidth
+                  >
+                    <MenuItem value="All">All</MenuItem>
+                    {INCIDENT_TYPES.map((i) => (
+                      <MenuItem key={i} value={i}>
+                        {i}
+                      </MenuItem>
+                    ))}
+                  </TextField>
+                </Grid>
+              </Grid>
+            </Box>
+          </Paper>
         </Box>
 
-        <TableContainer>
-          <Table size="small">
-            <TableHead>
-              <TableRow>
-                <TableCell>ID</TableCell>
-                <TableCell>Date/Time</TableCell>
-                <TableCell>Type</TableCell>
-                <TableCell>Location</TableCell>
-                <TableCell>Complainant</TableCell>
-                <TableCell>Respondent</TableCell>
-                <TableCell>Status</TableCell>
-                <TableCell align="center">Actions</TableCell>
-              </TableRow>
-            </TableHead>
-            <TableBody>
-              {pagedIncidents.map((i) => (
-                <TableRow key={i.id}>
-                  <TableCell>{i.id}</TableCell>
-                  <TableCell>{formatDateTime(i.incident_date)}</TableCell>
-                  <TableCell>{i.incident_type}</TableCell>
-                  <TableCell>{i.location || ''}</TableCell>
-                  <TableCell>{residentName(i.complainant_id)}</TableCell>
-                  <TableCell>{residentName(i.respondent_id)}</TableCell>
-                  <TableCell>{i.status}</TableCell>
-                  <TableCell align="center">
-                    <IconButton
-                      size="small"
-                      onClick={() => handleEditClick(i)}
-                      sx={{ mr: 1 }}
-                    >
-                      <EditIcon fontSize="small" />
-                    </IconButton>
-                    <IconButton
-                      size="small"
-                      color="error"
-                      onClick={() => handleDeleteClick(i)}
-                    >
-                      <DeleteIcon fontSize="small" />
-                    </IconButton>
-                  </TableCell>
-                </TableRow>
-              ))}
-              {pagedIncidents.length === 0 && (
-                <TableRow>
-                  <TableCell colSpan={8} align="center">
-                    No incidents found.
-                  </TableCell>
-                </TableRow>
-              )}
-            </TableBody>
-          </Table>
-        </TableContainer>
+        <Box sx={{ flex: 2, minWidth: 200, height: '100%'}}>
+          <Paper elevation={2}>
+            <TableContainer
+              sx={{
+                maxHeight: '90vh',
+                overflowX: 'auto',
+                scrollbarWidth: 'none',
+                '&:hover': {
+                  scrollbarWidth: 'thin',
+                  scrollbarColor: 'rgba(0,0,0,0.3) transparent',
+                } 
+              }}
+              >
+              <Table size="medium" stickyHeader>
+                <TableHead>
+                  <TableRow>
+                    <TableCell>ID</TableCell>
+                    <TableCell>Date/Time</TableCell>
+                    <TableCell>Type</TableCell>
+                    <TableCell>Location</TableCell>
+                    <TableCell>Complainant</TableCell>
+                    <TableCell>Respondent</TableCell>
+                    <TableCell>Status</TableCell>
+                    <TableCell>Description</TableCell>
+                    <TableCell align="center">Actions</TableCell>
+                  </TableRow>
+                </TableHead>
+                <TableBody>
+                  {filteredIncidents.map((i) => (
+                    <TableRow key={i.id}>
+                      <TableCell>{i.id}</TableCell>
+                      <TableCell>{formatDateTime(i.incident_date)}</TableCell>
+                      <TableCell>{i.incident_type}</TableCell>
+                      <TableCell>{i.location || ''}</TableCell>
+                      <TableCell>{residentName(i.complainant_id)}</TableCell>
+                      <TableCell>{residentName(i.respondent_id)}</TableCell>
+                      <TableCell>{i.status}</TableCell>
+                      <TableCell>{i.description}</TableCell>
+                      <TableCell align="center">
+                        <IconButton
+                          size="small"
+                          onClick={() => handleEditClick(i)}
+                          sx={{ mr: 1 }}
+                        >
+                          <EditIcon fontSize="small" />
+                        </IconButton>
+                        <IconButton
+                          size="small"
+                          color="error"
+                          onClick={() => handleDeleteClick(i)}
+                        >
+                          <DeleteIcon fontSize="small" />
+                        </IconButton>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </TableContainer>
+          </Paper>
+        </Box>
+      </Box>   
+      
+      
+      
 
-        <TablePagination
-          component="div"
-          count={filteredIncidents.length}
-          page={page}
-          onPageChange={handleChangePage}
-          rowsPerPage={rowsPerPage}
-          onRowsPerPageChange={handleChangeRowsPerPage}
-          rowsPerPageOptions={[5, 10, 25]}
-        />
-      </Paper>
+      {/* ADD OPEN */}
+      <Dialog open={addOpen} onClose={handleAddClose} maxWidth='md' fullWidth>
+        <DialogTitle>Add Incident</DialogTitle>
+        {addOpen && (
+          <Box sx={{flexGrow: 1}} component="form" onSubmit={handleSubmit}>
+            <DialogContent dividers>
+              <Grid container spacing={2} sx={{m: 2}}>
+                <Grid size={{xs: 12, md: 6}}>
+                  <TextField
+                    type="datetime-local"
+                    label="Date & Time"
+                    name="incident_date"
+                    value={form.incident_date}
+                    onChange={handleChange}
+                    fullWidth
+                    required
+                    InputLabelProps={{ shrink: true }}
+                  />
+                </Grid>
+                <Grid size={{xs: 12, md: 6}}>
+                  <TextField
+                    select
+                    label="Incedent Type"
+                    name="incident_type"
+                    value={form.incident_type}
+                    onChange={handleChange}
+                    fullWidth
+                  >
+                    {INCIDENT_TYPES.map((type) => (
+                      <MenuItem key={type} value={type}>
+                        {type}
+                      </MenuItem>
+                    ))}
+                  </TextField>
+                </Grid>
+                <Grid size={{xs: 12, md: 12}}>
+                  <TextField
+                    label="Location"
+                    name="location"
+                    value={form.location}
+                    onChange={handleChange}
+                    fullWidth
+                  />
+                </Grid>
+
+                <Grid size={{xs: 12, md: 4}}>
+                  <Autocomplete 
+                    options={residents}
+                    getOptionLabel={(r) => `${r.last_name}, ${r.first_name}`}
+                    value={residents.find((r) => r.id === form.complainant_id) || null}
+                    onChange={(event, newValue) => {
+                      setForm((prev) => ({
+                        ...prev, complainant_id: newValue ? newValue.id : ''
+                      }));
+                    }}
+                    renderInput={(params) => (
+                      <TextField {...params} label="Complainant" fullWidth required />
+                    )}
+                    />
+                </Grid>
+                <Grid size={{xs: 12, md: 4}}>
+                  <Autocomplete 
+                    options={residents}
+                    getOptionLabel={(r) => `${r.last_name}, ${r.first_name}`}
+                    value={residents.find((r) => r.id === form.respondent_id) || null}
+                    onChange={(event, newValue) => {
+                      setForm((prev) => ({
+                        ...prev,
+                        respondent_id: newValue ? newValue.id : ''
+                      }));
+                    }}
+                    renderInput={(params) => (<TextField {...params} label="Respondent" fullWidth required />)}
+                    />
+                </Grid>
+                <Grid size={{xs: 12, md: 4}}>
+                  <TextField
+                    select
+                    label="Status"
+                    name="status"
+                    value={form.status}
+                    onChange={handleChange}
+                    fullWidth
+                  >
+                    {STATUS_OPTIONS.map((s) => (
+                      <MenuItem key={s} value={s}>
+                        {s}
+                      </MenuItem>
+                    ))}
+                  </TextField>
+                </Grid>
+                <Grid size={{xs: 12, md: 12}}>
+                  <TextField
+                    label="Description"
+                    name="description"
+                    value={form.description}
+                    onChange={handleChange}
+                    fullWidth
+                    multiline
+                    minRows={3}
+                    maxRows={6}
+                  />
+                </Grid>
+                {errorForm && (
+                  <Grid size={{xs: 12, md: 12}}>
+                    <Typography color="error" variant="body2">
+                      {errorForm}
+                    </Typography>
+                  </Grid>
+                )}
+              </Grid>
+            </DialogContent>
+            <DialogActions>
+              <Button
+                variant='text'
+                onClick={() => handleAddClose()}>
+                Close
+              </Button>
+              <Button
+                type='submit'
+                variant='contained'
+                disabled={saving}>
+                Save
+              </Button>
+            </DialogActions>
+        </Box>
+        )}
+      </Dialog>
 
       {/* Edit Incident Dialog */}
       <Dialog open={editOpen} onClose={handleEditClose} maxWidth="md" fullWidth>
         <DialogTitle>Edit Incident</DialogTitle>
         <DialogContent dividers>
           {editData && (
-            <Grid container spacing={2} sx={{ mt: 1 }}>
-              <Grid item xs={12} md={4}>
+            <Grid container spacing={2} sx={{ m: 2 }}>
+              <Grid size={{xs: 12, md: 6}}>
                 <TextField
                   type="datetime-local"
                   label="Date & Time"
@@ -536,24 +576,23 @@ const IncidentsPage = () => {
                   InputLabelProps={{ shrink: true }}
                 />
               </Grid>
-              <Grid item xs={12} md={4}>
-                <FormControl fullWidth>
-                  <InputLabel>Incident Type</InputLabel>
-                  <Select
-                    label="Incident Type"
-                    name="incident_type"
-                    value={editData.incident_type || ''}
-                    onChange={handleEditChange}
-                  >
-                    {INCIDENT_TYPES.map((type) => (
-                      <MenuItem key={type} value={type}>
-                        {type}
-                      </MenuItem>
-                    ))}
-                  </Select>
-                </FormControl>
+              <Grid size={{xs: 12, md: 6}}>
+                <TextField
+                  select
+                  label="Incedent Type"
+                  name="incident_type"
+                  value={editData.incident_type || ''}
+                  onChange={handleEditChange}
+                  fullWidth
+                >
+                  {INCIDENT_TYPES.map((type) => (
+                    <MenuItem key={type} value={type}>
+                      {type}
+                    </MenuItem>
+                  ))}
+                </TextField>
               </Grid>
-              <Grid item xs={12} md={4}>
+              <Grid size={{xs: 12, md: 12}}>
                 <TextField
                   label="Location"
                   name="location"
@@ -563,75 +602,62 @@ const IncidentsPage = () => {
                 />
               </Grid>
 
-              <Grid item xs={12} md={6}>
-                <FormControl fullWidth>
-                  <InputLabel>Complainant</InputLabel>
-                  <Select
-                    label="Complainant"
-                    name="complainant_id"
-                    value={editData.complainant_id || ''}
-                    onChange={handleEditChange}
-                  >
-                    <MenuItem value="">
-                      <em>None</em>
-                    </MenuItem>
-                    {residents.map((r) => (
-                      <MenuItem key={r.id} value={r.id}>
-                        {r.last_name}, {r.first_name}
-                      </MenuItem>
-                    ))}
-                  </Select>
-                </FormControl>
+              <Grid size={{xs: 12, md: 4}}>
+                <Autocomplete 
+                  options={residents}
+                  getOptionLabel={(r) => `${r.last_name}, ${r.first_name}`}
+                  value={residents.find((r) => r.id === editData.complainant_id) || null}
+                  onChange={(event, newValue) => {
+                    setEditData((prev) => ({
+                      ...prev, complainant_id: newValue ? newValue.id : ''
+                    }));
+                  }}
+                  renderInput={(params) => (
+                    <TextField {...params} label="Complainant" fullWidth required />
+                  )}
+                  />
               </Grid>
-              <Grid item xs={12} md={6}>
-                <FormControl fullWidth>
-                  <InputLabel>Respondent</InputLabel>
-                  <Select
-                    label="Respondent"
-                    name="respondent_id"
-                    value={editData.respondent_id || ''}
-                    onChange={handleEditChange}
-                  >
-                    <MenuItem value="">
-                      <em>None</em>
-                    </MenuItem>
-                    {residents.map((r) => (
-                      <MenuItem key={r.id} value={r.id}>
-                        {r.last_name}, {r.first_name}
-                      </MenuItem>
-                    ))}
-                  </Select>
-                </FormControl>
+              <Grid size={{xs: 12, md: 4}}>
+                <Autocomplete 
+                  options={residents}
+                  getOptionLabel={(r) => `${r.last_name}, ${r.first_name}`}
+                  value={residents.find((r) => r.id === editData.respondent_id) || null}
+                  onChange={(event, newValue) => {
+                    setEditData((prev) => ({
+                      ...prev, respondent_id: newValue ? newValue.id : ''
+                    }));
+                  }}
+                  renderInput={(params) => (<TextField {...params} label="Respondent" fullWidth required />)}
+                  />
               </Grid>
 
-              <Grid item xs={12} md={6}>
-                <FormControl fullWidth>
-                  <InputLabel>Status</InputLabel>
-                  <Select
-                    label="Status"
-                    name="status"
-                    value={editData.status || ''}
-                    onChange={handleEditChange}
-                  >
-                    {STATUS_OPTIONS.map((s) => (
-                      <MenuItem key={s} value={s}>
-                        {s}
-                      </MenuItem>
-                    ))}
-                  </Select>
-                </FormControl>
-              </Grid>
-
-              <Grid item xs={12}>
-                <TextField
-                  label="Description"
-                  name="description"
-                  value={editData.description || ''}
+              <Grid size={{xs: 12, md: 4}}>
+                 <TextField
+                  select
+                  label="Status"
+                  name="status"
+                  value={editData.status || ''}
                   onChange={handleEditChange}
                   fullWidth
-                  multiline
-                  minRows={3}
-                  maxRows={6}
+                >
+                  {STATUS_OPTIONS.map((s) => (
+                    <MenuItem key={s} value={s}>
+                      {s}
+                    </MenuItem>
+                  ))}
+                </TextField>
+              </Grid>
+
+              <Grid size={{xs: 12, md: 12}}>
+                <TextField
+                label="Description"
+                name="description"
+                value={editData.description || ''}
+                onChange={handleEditChange}
+                fullWidth
+                multiline
+                minRows={3}
+                maxRows={6}
                 />
               </Grid>
 

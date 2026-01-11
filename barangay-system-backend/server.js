@@ -41,7 +41,7 @@ const pool = mysql.createPool({
   host: process.env.DB_HOST || 'localhost',
   user: process.env.DB_USER || 'root',
   password: process.env.DB_PASSWORD || '',
-  database: process.env.DB_NAME || 'barangay_db',
+  database: process.env.DB_NAME || 'barangay_bis2',
   waitForConnections: true,
   connectionLimit: 10,
   queueLimit: 0,
@@ -176,7 +176,14 @@ app.get('/api/residents', async (req, res) => {
     const residents = await query(
       'SELECT * FROM residents ORDER BY last_name, first_name'
     );
-    res.json(residents);
+
+    const cleanDate = residents.map(r => ({ 
+      ...r, birthdate: r.birthdate 
+      ? new Date(r.birthdate).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric', }) 
+      : null,
+    }));
+
+    res.json(cleanDate);
   } catch (err) {
     console.error('Error fetching residents:', err);
     res.status(500).json({ message: 'Error fetching residents' });
@@ -276,6 +283,19 @@ app.put('/api/residents/:id', verifyToken, async (req, res) => {
   }
 });
 
+// DELETE /api/residents/:id - delete (protected)
+app.delete('/api/residents/:id', verifyToken, async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    await query('DELETE FROM residents WHERE id = ?', [id]);
+    res.json({ message: 'Resident deleted successfully' });
+  } catch (err) {
+    console.error('Error deleting resident:', err);
+    res.status(500).json({ message: 'Error deleting resident' });
+  }
+});
+
 // ===================== HOUSEHOLDS =====================
 
 // GET /api/households
@@ -344,12 +364,26 @@ app.put('/api/households/:id', verifyToken, async (req, res) => {
   }
 });
 
+// DELETE /api/households/:id - delete (protected)
+app.delete('/api/households/:id', verifyToken, async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    await query('DELETE FROM households WHERE id = ?', [id]);
+    res.json({ message: 'Household deleted successfully' });
+  } catch (err) {
+    console.error('Error deleting resident:', err);
+    res.status(500).json({ message: 'Error deleting household' });
+  }
+});
+
 // GET /api/households/:id/members
 app.get('/api/households/:id/members', async (req, res) => {
   try {
     const householdId = req.params.id;
     const members = await query(
       `SELECT hm.id,
+              hm.household_id,
               r.id AS resident_id,
               r.first_name,
               r.last_name,
@@ -403,6 +437,39 @@ app.post('/api/households/:id/members', verifyToken, async (req, res) => {
     res.status(500).json({ message: 'Error adding household member' });
   }
 });
+
+// PUT /api/households/:householdId/member/:memberId (protected)
+app.put('/api/households/:householdId/members/:memberId', async (req, res) => {
+  const { householdId, memberId } = req.params;
+  const { relation_to_head } = req.body;
+
+  try {
+    await query(
+      `UPDATE household_members
+       SET relation_to_head = ?
+       WHERE id = ? AND household_id = ?`,
+      [relation_to_head, memberId, householdId]
+    );
+    res.json({ message: 'Member updated successfully' });
+  } catch (err) {
+    console.error('Error updating member:', err);
+    res.status(500).json({ message: 'Error updating member' });
+  }
+});
+
+// DELETE /api/households/:id - delete (protected)
+app.delete('/api/member/:id', verifyToken, async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    await query('DELETE FROM household_members WHERE id = ?', [id]);
+    res.json({ message: 'Member deleted successfully' });
+  } catch (err) {
+    console.error('Error deleting member:', err);
+    res.status(500).json({ message: 'Error deleting member' });
+  }
+});
+
 
 // ===================== INCIDENTS =====================
 
@@ -508,6 +575,19 @@ app.put('/api/incidents/:id', verifyToken, async (req, res) => {
   } catch (err) {
     console.error('Error updating incident:', err);
     res.status(500).json({ message: 'Error updating incident' });
+  }
+});
+
+// DELETE /api/incidents/:id - delete (protected)
+app.delete('/api/incidents/:id', verifyToken, async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    await query('DELETE FROM incidents WHERE id = ?', [id]);
+    res.json({ message: 'Incedent deleted successfully' });
+  } catch (err) {
+    console.error('Error deleting incedent:', err);
+    res.status(500).json({ message: 'Error deleting incedent' });
   }
 });
 
