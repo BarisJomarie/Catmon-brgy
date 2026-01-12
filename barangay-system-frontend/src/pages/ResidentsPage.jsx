@@ -30,6 +30,7 @@ import SaveIcon from '@mui/icons-material/Save';
 import DeleteIcon from '@mui/icons-material/Delete';
 import SearchIcon from '@mui/icons-material/Search';
 import api from '../api';
+import * as XLSX from "xlsx";
 
 const initialForm = {
   last_name: '',
@@ -178,6 +179,81 @@ const ResidentsPage = () => {
     return matchSearch && matchSex && matchStatus;
   });
 
+
+  //EXPORT RESIDENTS TO XLSX
+  const handleExportXLSX = () => {
+  if (filteredResidents.length === 0) {
+    alert("No residents to export");
+    return;
+  }
+
+  const data = filteredResidents.map((r) => ({
+    "Last Name": r.last_name,
+    "First Name": r.first_name,
+    "Middle Name": r.middle_name || "",
+    Suffix: r.suffix || "",
+    Sex: r.sex,
+    Birthdate: r.birthdate || "",
+    "Civil Status": r.civil_status || "",
+    Contact: r.contact_no || "",
+    Address: r.address || "",
+  }));
+
+
+  const worksheet = XLSX.utils.json_to_sheet(data);
+  const workbook = XLSX.utils.book_new();
+
+  XLSX.utils.book_append_sheet(workbook, worksheet, "Residents");
+
+  XLSX.writeFile(workbook, "Residents.xlsx");
+};
+
+//IMPORT RESIDENTS FROM XLSX
+const handleImportXLSX = async (e) => {
+  const file = e.target.files[0];
+  if (!file) return;
+
+  try {
+    const data = await file.arrayBuffer();
+    const workbook = XLSX.read(data);
+
+    const sheetName = workbook.SheetNames[0];
+    const worksheet = workbook.Sheets[sheetName];
+
+    const rows = XLSX.utils.sheet_to_json(worksheet);
+
+    if (rows.length === 0) {
+      alert("Excel file is empty");
+      return;
+    }
+
+    // Import one by one
+    for (const row of rows) {
+      await api.post("/residents", {
+        last_name: row["Last Name"] || row.last_name,
+        first_name: row["First Name"] || row.first_name,
+        middle_name: row["Middle Name"] || "",
+        suffix: row["Suffix"] || "",
+        sex: row["Sex"] || "Male",
+        birthdate: row["Birthdate"] || null,
+        civil_status: row["Civil Status"] || "",
+        contact_no: row["Contact"] || "",
+        address: row["Address"] || "",
+      });
+    }
+
+    alert("Residents imported successfully");
+    fetchResidents();
+  } catch (err) {
+    console.error(err);
+    alert("Failed to import XLSX");
+  } finally {
+    e.target.value = ""; // reset input
+  }
+};
+
+
+
   return (
     <Box>
       <Box sx={{ display: 'flex', gap: 2}}>
@@ -195,22 +271,28 @@ const ResidentsPage = () => {
               </Button>
             </Grid>
             <Grid size={{sx: 12, md: 6}}>
-              <Button 
-                variant='contained'
-                onClick={() => alert('Import Residents XLSX')}
-                size='large'
+              <Button
+                variant="contained"
+                component="label"
+                size="large"
                 fullWidth
-                >
+              >
                 Import
+                <input
+                  type="file"
+                  accept=".xlsx,.xls"
+                  hidden
+                  onChange={handleImportXLSX}
+                />
               </Button>
             </Grid>
             <Grid size={{sx: 12, md: 6}}>
               <Button
-                variant='contained'
-                onClick={() => alert('Export Residents in XLSX')}
-                size='large'
+                variant="contained"
+                onClick={handleExportXLSX}
+                size="large"
                 fullWidth
-                >
+              >
                 Export
               </Button>
             </Grid>
