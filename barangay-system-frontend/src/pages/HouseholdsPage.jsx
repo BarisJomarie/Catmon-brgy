@@ -396,7 +396,7 @@ const HouseholdsPage = () => {
           </Paper>
         </Box>
 
-        <Box sx={{ flex: 2, minWidth: 200, height: '100%'}}>
+        <Box sx={{ flex: 1, minWidth: 200, height: '100%'}}>
           <Paper elevation={2}>
             <TableContainer
               sx={{

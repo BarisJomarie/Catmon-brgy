@@ -182,15 +182,40 @@ const ResidentsPage = () => {
     <Box>
       <Box sx={{ display: 'flex', gap: 2}}>
         <Box sx={{ maxWidth: '20vw', minWidth: 200 }}>
-          <Button 
-            variant='contained' 
-            disabled={addOpen} 
-            onClick={() => handleAddClick()}
-            size='large'
-            sx={{mb: 2, width: '100%'}}
-            >
-            Add Resident
-          </Button>
+          <Grid container spacing={1} sx={{mb: 2}}>
+            <Grid size={{xs: 12, md: 12}}>
+               <Button 
+                variant='contained' 
+                disabled={addOpen} 
+                onClick={() => handleAddClick()}
+                size='large'
+                fullWidth
+                >
+                Add Resident
+              </Button>
+            </Grid>
+            <Grid size={{sx: 12, md: 6}}>
+              <Button 
+                variant='contained'
+                onClick={() => alert('Import Residents XLSX')}
+                size='large'
+                fullWidth
+                >
+                Import
+              </Button>
+            </Grid>
+            <Grid size={{sx: 12, md: 6}}>
+              <Button
+                variant='contained'
+                onClick={() => alert('Export Residents in XLSX')}
+                size='large'
+                fullWidth
+                >
+                Export
+              </Button>
+            </Grid>
+          </Grid>
+         
           <Paper sx={{ p: 2}}>
             <Typography variant="h6" sx={{mb: 2}}>Filter</Typography>
             <Box sx={{flexGrow: 1}}>

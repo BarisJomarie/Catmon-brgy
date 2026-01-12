@@ -1,2 +1,5 @@
 # Node dependencies
 **/node_modules
+
+/barangay-system-frontend/node_modules
+/barangay-system-backend/node_modules
