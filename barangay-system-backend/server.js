@@ -79,6 +79,12 @@ function verifyToken(req, res, next) {
   }
 }
 
+
+// Root
+app.get('/', (req, res) => {
+  res.send('Barangay System API running...');
+});
+
 // ===================== AUTH =====================
 
 // POST /api/auth/register
@@ -732,10 +738,39 @@ app.post('/api/services/:id/beneficiaries', verifyToken, async (req, res) => {
   }
 });
 
-// Root
-app.get('/', (req, res) => {
-  res.send('Barangay System API running...');
+// PUT /api/services/:servicesId/beneficiaries/:beneficiariesId (protected)
+app.put('/api/services/:servicesId/beneficiaries/:beneficiariesId', async (req, res) => {
+  const { servicesId, beneficiariesId } = req.params;
+  const { notes } = req.body;
+
+  try {
+    await query(
+      `UPDATE service_beneficiaries
+       SET notes = ?
+       WHERE id = ? AND service_id = ?`,
+      [notes, beneficiariesId, servicesId]
+    );
+    res.json({ message: 'Beneficiary updated successfully' });
+  } catch (err) {
+    console.error('Error updating beneficiary:', err);
+    res.status(500).json({ message: 'Error updating beneficiary' });
+  }
 });
+
+// DELETE /api/services/:id - delete (protected)
+app.delete('/api/beneficiaries/:id', verifyToken, async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    await query('DELETE FROM service_beneficiaries WHERE id = ?', [id]);
+    res.json({ message: 'Beneficiary deleted successfully' });
+  } catch (err) {
+    console.error('Error deleting beneficiary:', err);
+    res.status(500).json({ message: 'Error deleting beneficiary' });
+  }
+});
+
+
 // ===================== BARANGAY PROFILE =====================
 
 // GET /api/barangay-profile

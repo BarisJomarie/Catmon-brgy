@@ -9,6 +9,7 @@ import {
   MenuItem,
   Button,
   Divider,
+  Autocomplete,
 } from '@mui/material';
 import api from '../api';
 import jsPDF from 'jspdf';
@@ -27,9 +28,9 @@ const CertificatesPage = () => {
   const [issueDate, setIssueDate] = useState(
     new Date().toISOString().slice(0, 10)
   );
-  const [barangayName, setBarangayName] = useState('Barangay Sample');
-  const [municipality, setMunicipality] = useState('Sample City');
-  const [province, setProvince] = useState('Sample Province');
+  const [barangayName, setBarangayName] = useState('Catmon');
+  const [municipality, setMunicipality] = useState('Malabon');
+  const [province, setProvince] = useState('Metro Manila');
   const [captainName, setCaptainName] = useState('');
   const [secretaryName, setSecretaryName] = useState('');
   const [placeIssued, setPlaceIssued] = useState('Barangay Hall');
@@ -53,26 +54,27 @@ const CertificatesPage = () => {
     };
     loadResidents();
   }, []);
-useEffect(() => {
-  const loadProfile = async () => {
-    try {
-      setProfileLoading(true);
-      const res = await api.get('/barangay-profile');
-      if (res.data) {
-        setBarangayName(res.data.barangay_name);
-        setMunicipality(res.data.municipality);
-        setProvince(res.data.province);
-        setPlaceIssued(res.data.place_issued || 'Barangay Hall');
-      }
-    } catch (err) {
-      console.error('Error loading barangay profile', err);
-      // optional: setError('Failed to load barangay profile.');
-    } finally {
-      setProfileLoading(false);
-    }
-  };
-  loadProfile();
-}, []);
+
+// useEffect(() => {
+//   const loadProfile = async () => {
+//     try {
+//       setProfileLoading(true);
+//       const res = await api.get('/barangay-profile');
+//       if (res.data) {
+//         setBarangayName(res.data.barangay_name);
+//         setMunicipality(res.data.municipality);
+//         setProvince(res.data.province);
+//         setPlaceIssued(res.data.place_issued || 'Barangay Hall');
+//       }
+//     } catch (err) {
+//       console.error('Error loading barangay profile', err);
+//       // optional: setError('Failed to load barangay profile.');
+//     } finally {
+//       setProfileLoading(false);
+//     }
+//   };
+//   loadProfile();
+// }, []);
 
   // Load officials
   useEffect(() => {
@@ -80,6 +82,7 @@ useEffect(() => {
       try {
         const res = await api.get('/officials');
         setOfficials(res.data || []);
+        console.log(res.data);
       } catch (err) {
         console.error('Error loading officials for certificates', err);
       }
@@ -246,7 +249,7 @@ useEffect(() => {
     if (orNumber || amount) {
       let orText = 'OR No.: ' + (orNumber || 'N/A');
       if (amount) {
-        orText += `    Amount: ₱${amount}`;
+        orText += ` | Amount: PHP ${amount}`;
       }
       doc.setFontSize(10);
       doc.text(orText, marginX, cursorY);
@@ -286,37 +289,26 @@ useEffect(() => {
 
   return (
     <Box>
-      <Typography variant="h5" gutterBottom>
-        Barangay Certificates
-      </Typography>
-
-      <Grid container spacing={2}>
-        {/* Left side: form */}
-        <Grid item xs={12} md={6}>
+      <Box sx={{display: 'flex', gap: 10}}>
+        <Box sx={{flex: 1}}>
           <Paper sx={{ p: 2, mb: 2 }} elevation={2}>
-            <Typography variant="h6" gutterBottom>
-              Resident & Certificate Details
-            </Typography>
-
-            <Grid container spacing={2}>
-              <Grid item xs={12}>
-                <TextField
-                  select
-                  label="Resident"
-                  value={selectedResidentId}
-                  onChange={(e) => setSelectedResidentId(e.target.value)}
-                  fullWidth
-                  required
-                >
-                  {residents.map((r) => (
-                    <MenuItem key={r.id} value={r.id}>
-                      {r.last_name}, {r.first_name}
-                    </MenuItem>
-                  ))}
-                </TextField>
+            <Typography variant="h6" gutterBottom>Resident & Certificate Details</Typography>
+            <Grid container spacing={2} sx={{m: 2}}>
+              <Grid size={{xs: 12, md: 3}}>
+                <Autocomplete 
+                  options={residents} 
+                  getOptionLabel={(option) => `${option.last_name}, ${option.first_name}`}
+                  value={residents.find((r) => r.id === selectedResidentId) || null}
+                  onChange={(event, newValue) => {
+                    setSelectedResidentId(newValue ? newValue.id : "");
+                  }}
+                  renderInput={(params) => (
+                    <TextField {...params} label="Resident" fullWidth/>
+                  )}
+                />
               </Grid>
 
-              <Grid item xs={12}>
+              <Grid size={{xs: 12, md: 3}}>
                 <TextField
                   select
                   label="Certificate Type"
@@ -332,7 +324,7 @@ useEffect(() => {
                 </TextField>
               </Grid>
 
-              <Grid item xs={12}>
+              <Grid size={{xs: 12, md: 3}}>
                 <TextField
                   label="Purpose"
                   placeholder="e.g., employment, scholarship, school requirement"
@@ -342,7 +334,7 @@ useEffect(() => {
                 />
               </Grid>
 
-              <Grid item xs={12} md={6}>
+              <Grid size={{xs: 12, md: 3}}>
                 <TextField
                   label="Issue Date"
                   type="date"
@@ -353,7 +345,7 @@ useEffect(() => {
                 />
               </Grid>
 
-              <Grid item xs={12} md={6}>
+              <Grid size={{xs: 12, md: 4}}>
                 <TextField
                   label="Place of Issuance"
                   value={placeIssued}
@@ -362,7 +354,7 @@ useEffect(() => {
                 />
               </Grid>
 
-              <Grid item xs={12} md={4}>
+              <Grid size={{xs: 12, md: 4}}>
                 <TextField
                   label="OR Number"
                   value={orNumber}
@@ -370,7 +362,7 @@ useEffect(() => {
                   fullWidth
                 />
               </Grid>
-              <Grid item xs={12} md={4}>
+              <Grid size={{xs: 12, md: 4}}>
                 <TextField
                   label="Amount (₱)"
                   value={amount}
@@ -380,13 +372,10 @@ useEffect(() => {
               </Grid>
             </Grid>
           </Paper>
-
-          <Paper sx={{ p: 2 }} elevation={2}>
-            <Typography variant="h6" gutterBottom>
-              Barangay Header & Officials
-            </Typography>
-            <Grid container spacing={2}>
-              <Grid item xs={12}>
+          <Paper sx={{ p: 2, mb: 2 }} elevation={2}>
+            <Typography variant="h6" gutterBottom>Barangay Header & Officials</Typography>
+            <Grid container spacing={2} sx={{m: 2}}>
+              <Grid size={{xs: 12, md: 4}}>
                 <TextField
                   label="Barangay Name"
                   value={barangayName}
@@ -394,7 +383,7 @@ useEffect(() => {
                   fullWidth
                 />
               </Grid>
-              <Grid item xs={12} md={6}>
+              <Grid size={{xs: 12, md: 4}}>
                 <TextField
                   label="Municipality / City"
                   value={municipality}
@@ -402,7 +391,7 @@ useEffect(() => {
                   fullWidth
                 />
               </Grid>
-              <Grid item xs={12} md={6}>
+              <Grid size={{xs: 12, md: 4}}>
                 <TextField
                   label="Province"
                   value={province}
@@ -410,40 +399,44 @@ useEffect(() => {
                   fullWidth
                 />
               </Grid>
-              <Grid item xs={12} md={6}>
-                <TextField
-                  label="Punong Barangay"
-                  value={captainName}
-                  onChange={(e) => setCaptainName(e.target.value)}
-                  fullWidth
+              <Grid size={{xs: 12, md: 6}}>
+                <Autocomplete 
+                  options={officials.filter(o => o.is_captain === 1)}
+                  getOptionLabel={(option) => option.full_name}
+                  value={officials.find(o => o.full_name === captainName) || null}
+                  onChange={(event, newValue) => setCaptainName(newValue ? newValue.full_name : "")}
+                  renderInput={(params) => (
+                    <TextField {...params} label="Punong Barangay" fullWidth />
+                  )}
                 />
               </Grid>
-              <Grid item xs={12} md={6}>
-                <TextField
-                  label="Barangay Secretary"
-                  value={secretaryName}
-                  onChange={(e) => setSecretaryName(e.target.value)}
-                  fullWidth
+              <Grid size={{xs: 12, md: 6}}>
+                <Autocomplete 
+                  options={officials.filter(o => o.is_secretary === 1)} 
+                  getOptionLabel={(option) => option.full_name} 
+                  value={officials.find(o => o.full_name === secretaryName) || null} 
+                  onChange={(event, newValue) => setSecretaryName(newValue ? newValue.full_name : "")} 
+                  renderInput={(params) => ( 
+                    <TextField {...params} label="Barangay Secretary" fullWidth /> 
+                  )} 
                 />
               </Grid>
             </Grid>
           </Paper>
-
           {error && (
             <Typography color="error" variant="body2" sx={{ mt: 2 }}>
               {error}
             </Typography>
           )}
-
-          <Box sx={{ mt: 2, display: 'flex', gap: 2 }}>
+          <Box sx={{ mt: 2}}>
             <Button variant="contained" onClick={handleGeneratePdf}>
               Generate PDF
             </Button>
           </Box>
-        </Grid>
-
-        {/* Right side: preview */}
-        <Grid item xs={12} md={6}>
+        </Box>
+        <Box sx={{flex: 1, p: 2, backgroundColor: '#ddd'}}>
+          <Typography variant="h6" gutterBottom sx={{color: 'black'}}>Certificate Preview</Typography>
+          <Divider sx={{ mb: 2 }} />
           <Paper sx={{ p: 3, minHeight: 400 }} elevation={2}>
             <Typography
               variant="subtitle2"
@@ -515,7 +508,7 @@ useEffect(() => {
             {(orNumber || amount) && (
               <Typography variant="body2" sx={{ mt: 1 }}>
                 OR No.: {orNumber || 'N/A'}{' '}
-                {amount ? ` | Amount: ₱${amount}` : ''}
+                {amount ? ` | Amount: PHP ${amount}` : ''}
               </Typography>
             )}
 
@@ -543,8 +536,8 @@ useEffect(() => {
               </Box>
             </Box>
           </Paper>
-        </Grid>
-      </Grid>
+        </Box>
+      </Box>
     </Box>
   );
 };

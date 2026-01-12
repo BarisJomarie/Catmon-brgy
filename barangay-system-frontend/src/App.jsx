@@ -107,6 +107,16 @@ const App = () => {
           }, 
         }, 
       },
+      MuiTableCell: { 
+        styleOverrides: { 
+          root: { 
+            maxWidth: 300, 
+            whiteSpace: 'nowrap', 
+            overflow: 'hidden', 
+            textOverflow: 'ellipsis', 
+          },
+        },
+      },
     },
   });
 
@@ -122,7 +132,7 @@ const App = () => {
         <AppBar position="static" sx={{background: 'transparent', boxShadow: '0 1px #888888'}}>
           <Toolbar>
             <Typography variant="h6" sx={{ flexGrow: 1, color: '#1976d2' }}>
-              Barangay Information System
+              Catmon Information System
             </Typography>
 
             <ButtonGroup variant='text' aria-label="Basic button group">

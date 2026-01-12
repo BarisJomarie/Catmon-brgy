@@ -22,6 +22,7 @@ import {
   InputAdornment,
   TablePagination,
   Divider,
+  Autocomplete,
 } from '@mui/material';
 import EditIcon from '@mui/icons-material/Edit';
 import DeleteIcon from '@mui/icons-material/Delete';
@@ -53,10 +54,14 @@ const ServicesPage = () => {
   // forms
   const [serviceForm, setServiceForm] = useState(emptyService);
   const [beneficiaryForm, setBeneficiaryForm] = useState(emptyBeneficiary);
+  const [editData, setEditData] = useState(null);
 
   // dialogs
   const [serviceDialogOpen, setServiceDialogOpen] = useState(false);
   const [isEditingService, setIsEditingService] = useState(false);
+
+  const [beneficiaryEditOpen, setBeneficiaryEditOpen] = useState(false);
+
   const [beneficiaryDialogOpen, setBeneficiaryDialogOpen] = useState(false);
   const [deleteServiceDialogOpen, setDeleteServiceDialogOpen] =
     useState(false);
@@ -76,12 +81,10 @@ const ServicesPage = () => {
   const [errorService, setErrorService] = useState('');
   const [errorBeneficiary, setErrorBeneficiary] = useState('');
 
-  // filters & pagination
+  // filters
   const [dateFrom, setDateFrom] = useState('');
   const [dateTo, setDateTo] = useState('');
   const [searchText, setSearchText] = useState('');
-  const [page, setPage] = useState(0);
-  const [rowsPerPage, setRowsPerPage] = useState(10);
 
   // load all
   useEffect(() => {
@@ -292,6 +295,38 @@ const ServicesPage = () => {
     }
   };
 
+  // --- Beneficiary Edit Handlers ---
+  const handleEditBeneficiaryClick = (beneficiary) => {
+    setEditData({ ...beneficiary });
+    setBeneficiaryEditOpen(true); 
+  };
+
+  const handleEditBeneficiaryChange = (e) => {
+    const { name, value } = e.target;
+    setEditData((prev) => ({ ...prev, [name]: value }));
+  };
+
+  const handleBeneficiarySave = async () => {
+    try {
+      setSavingBeneficiary(true);
+      await api.put(`/services/${selectedService.id}/beneficiaries/${editData.id}`, editData);
+      setBeneficiaryEditOpen(false);
+      setEditData(null);
+      await loadBeneficiaries(selectedService.id);
+    } catch (err) {
+      console.error('Error updating beneficiary', err);
+      alert(err.response?.data?.message || 'Error updating beneficiary');
+    } finally {
+      setSavingBeneficiary(false);
+    }
+  };
+
+  const handleBeneficiaryClose = () => {
+    setBeneficiaryEditOpen(false);
+    setEditData(null);
+  };
+
+
   const openDeleteBeneficiaryDialog = (beneficiary) => {
     setBeneficiaryToDelete(beneficiary);
     setDeleteBeneficiaryDialogOpen(true);
@@ -306,9 +341,7 @@ const ServicesPage = () => {
     if (!selectedService || !beneficiaryToDelete) return;
     try {
       setDeletingBeneficiary(true);
-      await api.delete(
-        `/services/${selectedService.id}/beneficiaries/${beneficiaryToDelete.id}`
-      );
+      await api.delete(`/beneficiaries/${beneficiaryToDelete.id}`);
       setDeleteBeneficiaryDialogOpen(false);
       setBeneficiaryToDelete(null);
       await loadBeneficiaries(selectedService.id);
@@ -343,19 +376,6 @@ const ServicesPage = () => {
     return matchFrom && matchTo && matchSearch;
   });
 
-  const pagedServices = filteredServices.slice(
-    page * rowsPerPage,
-    page * rowsPerPage + rowsPerPage
-  );
-
-  const handleChangePage = (event, newPage) => {
-    setPage(newPage);
-  };
-
-  const handleChangeRowsPerPage = (event) => {
-    setRowsPerPage(parseInt(event.target.value, 10));
-    setPage(0);
-  };
 
   const residentName = (id) => {
     const r = residents.find((x) => x.id === id);
@@ -624,14 +644,14 @@ const ServicesPage = () => {
                 >
                   Add Beneficiary
                 </Button>
-                <Button
+                {/* <Button
                   variant="outlined"
                   size="small"
                   onClick={handleExportPdf}
                   disabled={beneficiaries.length === 0}
                 >
                   Export PDF
-                </Button>
+                </Button> */}
                 <Button
                   variant="outlined"
                   size="small"
@@ -681,6 +701,12 @@ const ServicesPage = () => {
                           <TableCell align="center">
                             <IconButton
                               size="small"
+                              onClick={() => handleEditBeneficiaryClick(b)}
+                            >
+                              <EditIcon fontSize="small" />
+                            </IconButton>
+                            <IconButton
+                              size="small"
                               color="error"
                               onClick={() => openDeleteBeneficiaryDialog(b)}
                             >
@@ -710,8 +736,8 @@ const ServicesPage = () => {
           {isEditingService ? 'Edit Service' : 'Add Service'}
         </DialogTitle>
         <DialogContent dividers>
-          <Grid container spacing={2} sx={{ mt: 0.5 }}>
-            <Grid item xs={12}>
+          <Grid container spacing={2} sx={{ m: 2 }}>
+            <Grid size={{xs: 12, md: 6}}>
               <TextField
                 label="Service Name"
                 name="service_name"
@@ -721,7 +747,7 @@ const ServicesPage = () => {
                 required
               />
             </Grid>
-            <Grid item xs={12} md={6}>
+            <Grid size={{xs: 12, md: 6}}>
               <TextField
                 label="Date"
                 type="date"
@@ -732,7 +758,7 @@ const ServicesPage = () => {
                 InputLabelProps={{ shrink: true }}
               />
             </Grid>
-            <Grid item xs={12} md={6}>
+            <Grid size={{xs: 12, md: 12}}>
               <TextField
                 label="Location"
                 name="location"
@@ -741,7 +767,7 @@ const ServicesPage = () => {
                 fullWidth
               />
             </Grid>
-            <Grid item xs={12}>
+            <Grid size={{xs: 12, md: 12}}>
               <TextField
                 label="Description"
                 name="description"
@@ -750,6 +776,7 @@ const ServicesPage = () => {
                 fullWidth
                 multiline
                 minRows={3}
+                maxRows={6}
               />
             </Grid>
             {errorService && (
@@ -782,25 +809,22 @@ const ServicesPage = () => {
       >
         <DialogTitle>Add Beneficiary</DialogTitle>
         <DialogContent dividers>
-          <Grid container spacing={2} sx={{ mt: 0.5 }}>
-            <Grid item xs={12}>
-              <TextField
-                select
-                label="Resident"
-                name="resident_id"
-                value={beneficiaryForm.resident_id}
-                onChange={handleBeneficiaryFormChange}
-                fullWidth
-                required
-              >
-                {residents.map((r) => (
-                  <MenuItem key={r.id} value={r.id}>
-                    {r.last_name}, {r.first_name}
-                  </MenuItem>
-                ))}
-              </TextField>
+          <Grid container spacing={2} sx={{ m: 2 }}>
+            <Grid size={{xs: 12, md: 12}}>
+              <Autocomplete 
+                options={residents} 
+                getOptionLabel={(option) => `${option.last_name}, ${option.first_name}`}
+                value={residents.find((r) => r.id === beneficiaryForm.resident_id) || null}
+                onChange={(event, newValue) => {
+                  setBeneficiaryForm((prev) => ({
+                    ...prev,
+                    resident_id: newValue ? newValue.id : ""
+                  }));
+                }}
+                renderInput={(params) => (<TextField {...params} label="Resident" name="resident_id" fullWidth required />)}
+              />
             </Grid>
-            <Grid item xs={12}>
+            <Grid size={{xs: 12, md: 12}}>
               <TextField
                 label="Notes"
                 name="notes"
@@ -808,7 +832,8 @@ const ServicesPage = () => {
                 onChange={handleBeneficiaryFormChange}
                 fullWidth
                 multiline
-                minRows={2}
+                minRows={3}
+                maxRows={6}
               />
             </Grid>
             {errorBeneficiary && (
@@ -831,6 +856,38 @@ const ServicesPage = () => {
           </Button>
         </DialogActions>
       </Dialog>
+
+      {/* DIALOG EDIT BENEFICIARY */}
+      <Dialog open={beneficiaryEditOpen} onClose={handleBeneficiaryClose} fullWidth maxWidth="sm">
+        <DialogTitle>Edit Beneficiary: {editData ? `${editData.last_name}, ${editData.first_name}` : ""}</DialogTitle>
+        <DialogContent dividers>
+          {editData && (
+            <Box sx={{ m: 2 }}>
+              <TextField
+                label="Notes"
+                name="notes"
+                value={editData.notes || ''}
+                onChange={handleEditBeneficiaryChange}
+                fullWidth
+                multiline
+                minRows={3}
+                maxRows={6}
+              />
+            </Box>
+          )}
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={handleBeneficiaryClose}>Cancel</Button>
+          <Button
+            onClick={handleBeneficiarySave}
+            variant="contained"
+            disabled={savingBeneficiary}
+          >
+            {savingBeneficiary ? 'Saving...' : 'Save'}
+          </Button>
+        </DialogActions>
+      </Dialog>
+
 
       {/* Delete service dialog */}
       <Dialog
