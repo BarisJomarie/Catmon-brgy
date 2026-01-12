@@ -1,3 +1,4 @@
+// src/pages/OfficialsPage.jsx
 import React, { useEffect, useState } from 'react';
 import {
   Box,
@@ -18,9 +19,12 @@ import {
   DialogActions,
   MenuItem,
   IconButton,
+  CircularProgress,
+  InputAdornment,
 } from '@mui/material';
 import EditIcon from '@mui/icons-material/Edit';
 import DeleteIcon from '@mui/icons-material/Delete';
+import SearchIcon from '@mui/icons-material/Search';
 import api from '../api';
 
 const POSITIONS = [
@@ -32,7 +36,7 @@ const POSITIONS = [
   'Barangay Clerk',
 ];
 
-const API_ROOT = 'http://localhost:5000'; // for signature images
+const API_ROOT = 'http://localhost:5000';
 
 const emptyForm = {
   id: null,
@@ -47,14 +51,18 @@ const OfficialsPage = () => {
   const [officials, setOfficials] = useState([]);
   const [loading, setLoading] = useState(false);
 
-  const [dialogOpen, setDialogOpen] = useState(false);
+  const [search, setSearch] = useState('');
+  const [positionFilter, setPositionFilter] = useState('All');
+
   const [form, setForm] = useState(emptyForm);
   const [signatureFile, setSignatureFile] = useState(null);
-  const [saving, setSaving] = useState(false);
-  const [error, setError] = useState('');
 
+  const [addOpen, setAddOpen] = useState(false);
+  const [editOpen, setEditOpen] = useState(false);
   const [deleteOpen, setDeleteOpen] = useState(false);
-  const [toDelete, setToDelete] = useState(null);
+
+  const [selected, setSelected] = useState(null);
+  const [saving, setSaving] = useState(false);
   const [deleting, setDeleting] = useState(false);
 
   const loadOfficials = async () => {
@@ -62,9 +70,6 @@ const OfficialsPage = () => {
       setLoading(true);
       const res = await api.get('/officials');
       setOfficials(res.data || []);
-    } catch (err) {
-      console.error('Error loading officials', err);
-      alert('Error loading officials');
     } finally {
       setLoading(false);
     }
@@ -74,115 +79,45 @@ const OfficialsPage = () => {
     loadOfficials();
   }, []);
 
-  const openAddDialog = () => {
-    setForm({
-      ...emptyForm,
-    });
-    setSignatureFile(null);
-    setError('');
-    setDialogOpen(true);
-  };
-
-  const openEditDialog = (off) => {
-    setForm({
-      id: off.id,
-      full_name: off.full_name,
-      position: off.position,
-      order_no: off.order_no ?? 0,
-      is_captain: !!off.is_captain,
-      is_secretary: !!off.is_secretary,
-    });
-    setSignatureFile(null);
-    setError('');
-    setDialogOpen(true);
-  };
-
-  const handleChange = (e) => {
-    const { name, value, type, checked } = e.target;
-    if (type === 'checkbox') {
-      setForm((prev) => ({ ...prev, [name]: checked }));
-    } else {
-      setForm((prev) => ({ ...prev, [name]: value }));
-    }
-  };
-
-  const handlePositionChange = (e) => {
-    const value = e.target.value;
-    setForm((prev) => ({
-      ...prev,
-      position: value,
-      is_captain: value === 'Punong Barangay' ? true : prev.is_captain,
-      is_secretary:
-        value === 'Barangay Secretary' ? true : prev.is_secretary,
-    }));
-  };
-
-  const handleFileChange = (e) => {
-    const file = e.target.files?.[0] || null;
-    setSignatureFile(file);
-  };
-
-  const validateForm = () => {
-    if (!form.full_name.trim()) return 'Full name is required.';
-    if (!form.position.trim()) return 'Position is required.';
-    return '';
-  };
+  const filteredOfficials = officials.filter((o) => {
+    const matchSearch = o.full_name
+      .toLowerCase()
+      .includes(search.toLowerCase());
+    const matchPosition =
+      positionFilter === 'All' || o.position === positionFilter;
+    return matchSearch && matchPosition;
+  });
 
   const handleSave = async () => {
-    const msg = validateForm();
-    if (msg) {
-      setError(msg);
-      return;
-    }
-
     try {
       setSaving(true);
       const fd = new FormData();
-      fd.append('full_name', form.full_name);
-      fd.append('position', form.position);
-      fd.append('order_no', form.order_no || 0);
-      fd.append('is_captain', form.is_captain ? '1' : '0');
-      fd.append('is_secretary', form.is_secretary ? '1' : '0');
-      if (signatureFile) {
-        fd.append('signature', signatureFile);
-      }
+      Object.entries(form).forEach(([k, v]) =>
+        fd.append(k, typeof v === 'boolean' ? (v ? '1' : '0') : v)
+      );
+      if (signatureFile) fd.append('signature', signatureFile);
 
       if (form.id) {
-        await api.put(`/officials/${form.id}`, fd, {
-          headers: { 'Content-Type': 'multipart/form-data' },
-        });
+        await api.put(`/officials/${form.id}`, fd);
       } else {
-        await api.post('/officials', fd, {
-          headers: { 'Content-Type': 'multipart/form-data' },
-        });
+        await api.post('/officials', fd);
       }
 
-      setDialogOpen(false);
-      await loadOfficials();
-    } catch (err) {
-      console.error('Error saving official', err);
-      setError(err.response?.data?.message || 'Error saving official');
+      setAddOpen(false);
+      setEditOpen(false);
+      setForm(emptyForm);
+      loadOfficials();
     } finally {
       setSaving(false);
     }
   };
 
-  const handleDeleteClick = (off) => {
-    setToDelete(off);
-    setDeleteOpen(true);
-  };
-
-  const handleDeleteConfirm = async () => {
-    if (!toDelete) return;
+  const handleDelete = async () => {
     try {
       setDeleting(true);
-      await api.delete(`/officials/${toDelete.id}`);
+      await api.delete(`/officials/${selected.id}`);
       setDeleteOpen(false);
-      setToDelete(null);
-      await loadOfficials();
-    } catch (err) {
-      console.error('Error deleting official', err);
-      alert(err.response?.data?.message || 'Error deleting official');
+      loadOfficials();
     } finally {
       setDeleting(false);
     }
@@ -190,98 +125,159 @@ const OfficialsPage = () => {
 
   return (
     <Box>
-      <Typography variant="h5" gutterBottom>
-        Barangay Officials
-      </Typography>
-
-      <Paper sx={{ p: 2, mb: 2 }} elevation={2}>
-        <Grid container justifyContent="space-between" alignItems="center">
-          <Grid item>
-            <Typography variant="h6">Officials List</Typography>
+      <Box sx={{ display: 'flex', gap: 2 }}>
+        {/* LEFT PANEL */}
+        <Box sx={{ maxWidth: '20vw', minWidth: 220 }}>
+          {/* ADD BUTTON */}
+          <Grid container spacing={1} sx={{ mb: 2 }}>
+             <Grid size={{xs: 12, md: 12}}>
+              <Button
+                variant="contained"
+                size="large"
+                fullWidth
+                onClick={() => {
+                  setForm(emptyForm);
+                  setAddOpen(true);
+                }}
+              >
+                ADD OFFICIAL
+              </Button>
+            </Grid>
           </Grid>
-          <Grid item>
-            <Button variant="contained" onClick={openAddDialog}>
-              Add Official
-            </Button>
-          </Grid>
-        </Grid>
-      </Paper>
 
-      <Paper sx={{ p: 2 }} elevation={2}>
-        {loading ? (
-          <Typography>Loading officials...</Typography>
-        ) : (
-          <TableContainer>
-            <Table size="small">
-              <TableHead>
-                <TableRow>
-                  <TableCell>Order</TableCell>
-                  <TableCell>Full Name</TableCell>
-                  <TableCell>Position</TableCell>
-                  <TableCell>Captain</TableCell>
-                  <TableCell>Secretary</TableCell>
-                  <TableCell>Signature</TableCell>
-                  <TableCell align="right">Actions</TableCell>
-                </TableRow>
-              </TableHead>
-              <TableBody>
-                {officials.length === 0 ? (
-                  <TableRow>
-                    <TableCell colSpan={7} align="center">
-                      No officials encoded yet.
-                    </TableCell>
-                  </TableRow>
-                ) : (
-                  officials.map((o) => (
-                    <TableRow key={o.id}>
-                      <TableCell>{o.order_no}</TableCell>
-                      <TableCell>{o.full_name}</TableCell>
-                      <TableCell>{o.position}</TableCell>
-                      <TableCell>{o.is_captain ? 'Yes' : ''}</TableCell>
-                      <TableCell>{o.is_secretary ? 'Yes' : ''}</TableCell>
-                      <TableCell>
-                        {o.signature_path ? (
-                          <img
-                            src={`${API_ROOT}${o.signature_path}`}
-                            alt="Signature"
-                            style={{ height: 40 }}
-                          />
-                        ) : (
-                          <Typography variant="caption">None</Typography>
-                        )}
-                      </TableCell>
-                      <TableCell align="right">
-                        <IconButton
-                          size="small"
-                          onClick={() => openEditDialog(o)}
-                          sx={{ mr: 1 }}
-                        >
-                          <EditIcon fontSize="small" />
-                        </IconButton>
-                        <IconButton
-                          size="small"
-                          color="error"
-                          onClick={() => handleDeleteClick(o)}
-                        >
-                          <DeleteIcon fontSize="small" />
-                        </IconButton>
-                      </TableCell>
+          {/* FILTER CARD */}
+          <Paper sx={{ p: 2 }}>
+            <Typography variant="h6" sx={{ mb: 2 }}>
+              Filter
+            </Typography>
+
+            <Grid container spacing={2}>
+              <Grid item xs={12}>
+                <TextField
+                  size="small"
+                  label="Search (name)"
+                  value={search}
+                  onChange={(e) => setSearch(e.target.value)}
+                  fullWidth
+                  InputProps={{
+                    endAdornment: (
+                      <InputAdornment position="end">
+                        <SearchIcon fontSize="small" />
+                      </InputAdornment>
+                    ),
+                  }}
+                />
+              </Grid>
+
+              <Grid item xs={12}>
+                <TextField
+                  select
+                  size="small"
+                  label="Position"
+                  value={positionFilter}
+                  onChange={(e) => setPositionFilter(e.target.value)}
+                  fullWidth
+                >
+                  <MenuItem value="All">All</MenuItem>
+                  {POSITIONS.map((p) => (
+                    <MenuItem key={p} value={p}>
+                      {p}
+                    </MenuItem>
+                  ))}
+                </TextField>
+              </Grid>
+            </Grid>
+          </Paper>
+        </Box>
+
+        {/* RIGHT PANEL */}
+        <Box sx={{ flex: 1, minWidth: 700 }}>
+          <Paper elevation={2}>
+            {loading ? (
+              <Box
+                sx={{
+                  height: '40vh',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: 2,
+                }}
+              >
+                <CircularProgress />
+                <Typography>Fetching Officials...</Typography>
+              </Box>
+            ) : (
+              <TableContainer
+                sx={{
+                  maxHeight: '90vh',
+                  overflowX: 'auto',
+                }}
+              >
+                <Table stickyHeader>
+                  <TableHead>
+                    <TableRow>
+                      <TableCell>Order</TableCell>
+                      <TableCell>Full Name</TableCell>
+                      <TableCell>Position</TableCell>
+                      <TableCell>Captain</TableCell>
+                      <TableCell>Secretary</TableCell>
+                      <TableCell>Signature</TableCell>
+                      <TableCell align="center">Actions</TableCell>
                     </TableRow>
-                  ))
-                )}
-              </TableBody>
-            </Table>
-          </TableContainer>
-        )}
-      </Paper>
+                  </TableHead>
+                  <TableBody>
+                    {filteredOfficials.map((o) => (
+                      <TableRow key={o.id}>
+                        <TableCell>{o.order_no}</TableCell>
+                        <TableCell>{o.full_name}</TableCell>
+                        <TableCell>{o.position}</TableCell>
+                        <TableCell>{o.is_captain ? 'Yes' : ''}</TableCell>
+                        <TableCell>{o.is_secretary ? 'Yes' : ''}</TableCell>
+                        <TableCell>
+                          {o.signature_path ? (
+                            <img
+                              src={`${API_ROOT}${o.signature_path}`}
+                              alt="Signature"
+                              height={35}
+                            />
+                          ) : (
+                            '—'
+                          )}
+                        </TableCell>
+                        <TableCell align="center">
+                          <IconButton
+                            size="small"
+                            onClick={() => {
+                              setForm(o);
+                              setEditOpen(true);
+                            }}
+                          >
+                            <EditIcon fontSize="small" />
+                          </IconButton>
+                          <IconButton
+                            size="small"
+                            color="error"
+                            onClick={() => {
+                              setSelected(o);
+                              setDeleteOpen(true);
+                            }}
+                          >
+                            <DeleteIcon fontSize="small" />
+                          </IconButton>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </TableContainer>
+            )}
+          </Paper>
+        </Box>
+      </Box>
 
-      {/* Add/Edit dialog */}
-      <Dialog
-        open={dialogOpen}
-        onClose={() => setDialogOpen(false)}
-        maxWidth="sm"
-        fullWidth
-      >
+      {/* ADD / EDIT DIALOG */}
+      <Dialog open={addOpen || editOpen} maxWidth="sm" fullWidth>
         <DialogTitle>
           {form.id ? 'Edit Official' : 'Add Official'}
         </DialogTitle>
@@ -290,9 +286,10 @@ const OfficialsPage = () => {
             <Grid item xs={12}>
               <TextField
                 label="Full Name"
-                name="full_name"
                 value={form.full_name}
-                onChange={handleChange}
+                onChange={(e) =>
+                  setForm({ ...form, full_name: e.target.value })
+                }
                 fullWidth
                 required
               />
@@ -301,9 +298,16 @@ const OfficialsPage = () => {
               <TextField
                 select
                 label="Position"
-                name="position"
                 value={form.position}
-                onChange={handlePositionChange}
+                onChange={(e) =>
+                  setForm({
+                    ...form,
+                    position: e.target.value,
+                    is_captain: e.target.value === 'Punong Barangay',
+                    is_secretary:
+                      e.target.value === 'Barangay Secretary',
+                  })
+                }
                 fullWidth
               >
                 {POSITIONS.map((p) => (
@@ -313,62 +317,53 @@ const OfficialsPage = () => {
                 ))}
               </TextField>
             </Grid>
-            <Grid item xs={12} md={4}>
+            <Grid item xs={4}>
               <TextField
-                label="Order No."
-                name="order_no"
                 type="number"
+                label="Order No."
                 value={form.order_no}
-                onChange={handleChange}
+                onChange={(e) =>
+                  setForm({ ...form, order_no: e.target.value })
+                }
                 fullWidth
               />
             </Grid>
             <Grid item xs={12}>
-              <Typography variant="body2">
-                Punong Barangay and Barangay Secretary flags are used to
-                auto-fill Certificates.
-              </Typography>
-            </Grid>
-            <Grid item xs={12}>
-              <Button variant="outlined" component="label">
-                {signatureFile ? 'Change Signature' : 'Upload Signature'}
+              <Button component="label" variant="outlined">
+                Upload Signature
                 <input
                   type="file"
                   hidden
                   accept="image/*"
-                  onChange={handleFileChange}
+                  onChange={(e) =>
+                    setSignatureFile(e.target.files[0])
+                  }
                 />
               </Button>
-              {signatureFile && (
-                <Typography variant="caption" sx={{ ml: 1 }}>
-                  {signatureFile.name}
-                </Typography>
-              )}
             </Grid>
-            {error && (
-              <Grid item xs={12}>
-                <Typography color="error" variant="body2">
-                  {error}
-                </Typography>
-              </Grid>
-            )}
           </Grid>
         </DialogContent>
         <DialogActions>
-          <Button onClick={() => setDialogOpen(false)}>Cancel</Button>
+          <Button
+            onClick={() => {
+              setAddOpen(false);
+              setEditOpen(false);
+            }}
+          >
+            Cancel
+          </Button>
           <Button variant="contained" onClick={handleSave} disabled={saving}>
             {saving ? 'Saving...' : 'Save'}
           </Button>
         </DialogActions>
       </Dialog>
 
-      {/* Delete dialog */}
-      <Dialog open={deleteOpen} onClose={() => setDeleteOpen(false)}>
+      {/* DELETE DIALOG */}
+      <Dialog open={deleteOpen}>
         <DialogTitle>Delete Official</DialogTitle>
         <DialogContent dividers>
           <Typography>
-            Delete{' '}
-            <strong>{toDelete ? toDelete.full_name : 'this official'}</strong>?
+            Delete <strong>{selected?.full_name}</strong>?
           </Typography>
         </DialogContent>
         <DialogActions>
@@ -376,7 +371,7 @@ const OfficialsPage = () => {
           <Button
             color="error"
             variant="contained"
-            onClick={handleDeleteConfirm}
+            onClick={handleDelete}
             disabled={deleting}
           >
             {deleting ? 'Deleting...' : 'Delete'}

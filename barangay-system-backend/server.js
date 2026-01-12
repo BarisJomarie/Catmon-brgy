@@ -860,8 +860,11 @@ app.post(
   upload.single('signature'),
   async (req, res) => {
     try {
-      const { full_name, position, order_no, is_captain, is_secretary } =
-        req.body;
+      const { full_name, position, order_no, is_secretary } = req.body;
+
+      const is_captain =
+        position === 'Punong Barangay' ? 1 : 0;
+
 
       if (!full_name || !position) {
         return res
@@ -873,15 +876,15 @@ app.post(
         ? `/uploads/signatures/${req.file.filename}`
         : null;
 
-      const result = await query(
+     const result = await query(
         `INSERT INTO officials
-         (full_name, position, order_no, is_captain, is_secretary, signature_path)
-         VALUES (?, ?, ?, ?, ?, ?)`,
+        (full_name, position, order_no, is_captain, is_secretary, signature_path)
+        VALUES (?, ?, ?, ?, ?, ?)`,
         [
           full_name,
           position,
           order_no || 0,
-          is_captain === '1' ? 1 : 0,
+          position === 'Punong Barangay' ? 1 : 0, // AUTO SET
           is_secretary === '1' ? 1 : 0,
           signature_path,
         ]
