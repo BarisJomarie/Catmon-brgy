@@ -657,6 +657,19 @@ app.put('/api/services/:id', verifyToken, async (req, res) => {
   }
 });
 
+// DELETE /api/services/:id - delete (protected)
+app.delete('/api/services/:id', verifyToken, async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    await query('DELETE FROM services WHERE id = ?', [id]);
+    res.json({ message: 'services deleted successfully' });
+  } catch (err) {
+    console.error('Error deleting services:', err);
+    res.status(500).json({ message: 'Error deleting services' });
+  }
+});
+
 // GET /api/services/:id/beneficiaries
 app.get('/api/services/:id/beneficiaries', async (req, res) => {
   try {

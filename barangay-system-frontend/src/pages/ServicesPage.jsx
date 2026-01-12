@@ -21,6 +21,7 @@ import {
   MenuItem,
   InputAdornment,
   TablePagination,
+  Divider,
 } from '@mui/material';
 import EditIcon from '@mui/icons-material/Edit';
 import DeleteIcon from '@mui/icons-material/Delete';
@@ -434,96 +435,104 @@ const ServicesPage = () => {
 
   return (
     <Box>
-      <Typography variant="h5" gutterBottom>
-        Services / Medical Missions
-      </Typography>
-
-      {/* Filters + Actions */}
-      <Paper sx={{ p: 2, mb: 2 }} elevation={2}>
-        <Grid container spacing={2} alignItems="center">
-          <Grid item xs={12} md={3}>
-            <TextField
-              label="From"
-              type="date"
-              value={dateFrom}
-              onChange={(e) => setDateFrom(e.target.value)}
-              fullWidth
-              size="small"
-              InputLabelProps={{ shrink: true }}
-            />
-          </Grid>
-          <Grid item xs={12} md={3}>
-            <TextField
-              label="To"
-              type="date"
-              value={dateTo}
-              onChange={(e) => setDateTo(e.target.value)}
-              fullWidth
-              size="small"
-              InputLabelProps={{ shrink: true }}
-            />
-          </Grid>
-          <Grid item xs={12} md={4}>
-            <TextField
-              label="Search (name / location / description)"
-              value={searchText}
-              onChange={(e) => setSearchText(e.target.value)}
-              fullWidth
-              size="small"
-              InputProps={{
-                endAdornment: (
-                  <InputAdornment position="end">
-                    <SearchIcon fontSize="small" />
-                  </InputAdornment>
-                ),
-              }}
-            />
-          </Grid>
-          <Grid item xs={12} md={2} sx={{ textAlign: { xs: 'left', md: 'right' } }}>
-            <Button variant="contained" onClick={openAddServiceDialog}>
-              Add Service
-            </Button>
-          </Grid>
-        </Grid>
-      </Paper>
-
-      <Grid container spacing={2}>
-        {/* Services list */}
-        <Grid item xs={12} md={7}>
+      <Box sx={{ display: 'flex', gap: 2}}>
+        <Box sx={{ maxWidth: '20vw', minWidth: 200 }}>
+          <Button 
+            variant="contained"
+            disabled={serviceDialogOpen}  
+            onClick={openAddServiceDialog}
+            size='large'
+            sx={{mb: 2}}
+            fullWidth
+            >
+            Add Service
+          </Button>
           <Paper sx={{ p: 2 }} elevation={2}>
-            <Typography variant="h6" gutterBottom>
-              Services
-            </Typography>
+            <Typography variant="h6" sx={{mb: 2}} gutterBottom>Filter</Typography>
+            <Box flexGrow={1}>
+              <Grid container spacing={2}>
+                <Grid size={{xs: 12, md: 12}}>
+                  <TextField
+                    label="Search (name / location / description)"
+                    value={searchText}
+                    onChange={(e) => setSearchText(e.target.value)}
+                    fullWidth
+                    size="small"
+                    InputProps={{
+                      endAdornment: (
+                        <InputAdornment position="end">
+                          <SearchIcon fontSize="small" />
+                        </InputAdornment>
+                      ),
+                    }}
+                  />
+                </Grid>
+                <Grid size={{xs: 12, md: 6}}>
+                  <TextField
+                    label="From"
+                    type="date"
+                    value={dateFrom}
+                    onChange={(e) => setDateFrom(e.target.value)}
+                    fullWidth
+                    size="small"
+                    InputLabelProps={{ shrink: true }}
+                  />
+                </Grid>
+                <Grid size={{xs: 12, md: 6}}>
+                  <TextField
+                    label="To"
+                    type="date"
+                    value={dateTo}
+                    onChange={(e) => setDateTo(e.target.value)}
+                    fullWidth
+                    size="small"
+                    InputLabelProps={{ shrink: true }}
+                  />
+                </Grid>
+              </Grid>
+            </Box>
+          </Paper>
+        </Box>
+
+        <Box sx={{ flex: 2, minWidth: 200, height: '100%'}}>
+          <Paper elevation={2}>
             {loadingServices ? (
               <Typography>Loading services...</Typography>
             ) : (
               <>
-                <TableContainer>
-                  <Table size="small">
+                <TableContainer
+                  sx={{
+                    maxHeight: '90vh',
+                    overflowX: 'auto',
+                    scrollbarWidth: 'none',
+                    '&:hover': {
+                      scrollbarWidth: 'thin',
+                      scrollbarColor: 'rgba(0,0,0,0.3) transparent',
+                    } 
+                  }}
+                  >
+                  <Table size="medium" stickyHeader>
                     <TableHead>
                       <TableRow>
                         <TableCell>Service Name</TableCell>
                         <TableCell>Date</TableCell>
                         <TableCell>Location</TableCell>
                         <TableCell>Beneficiaries</TableCell>
+                        <TableCell>Description</TableCell>
                         <TableCell align="center">Actions</TableCell>
+                        <TableCell align='center'>Select</TableCell>
                       </TableRow>
                     </TableHead>
                     <TableBody>
-                      {pagedServices.map((s) => (
-                        <TableRow
-                          key={s.id}
-                          hover
-                          selected={selectedService?.id === s.id}
-                          onClick={() => handleSelectService(s)}
-                          sx={{ cursor: 'pointer' }}
-                        >
+                      {filteredServices.map((s) => (
+                        <TableRow key={s.id}>
                           <TableCell>{s.service_name}</TableCell>
                           <TableCell>
                             {formatDate(s.service_date)}
                           </TableCell>
                           <TableCell>{s.location || ''}</TableCell>
                           <TableCell>{s.beneficiary_count || 0}</TableCell>
+                          <TableCell>{s.description}</TableCell>
                           <TableCell align="center">
                             <IconButton
                               size="small"
@@ -546,11 +555,20 @@ const ServicesPage = () => {
                               <DeleteIcon fontSize="small" />
                             </IconButton>
                           </TableCell>
+                          <TableCell align='center'>
+                            <Button
+                              size="small"
+                              variant="outlined"
+                              onClick={() => handleSelectService(s)}
+                            >
+                              View
+                            </Button>
+                          </TableCell>
                         </TableRow>
                       ))}
-                      {pagedServices.length === 0 && (
+                      {filteredServices.length === 0 && (
                         <TableRow>
-                          <TableCell colSpan={5} align="center">
+                          <TableCell colSpan={7} align="center">
                             No services found.
                           </TableCell>
                         </TableRow>
@@ -558,125 +576,128 @@ const ServicesPage = () => {
                     </TableBody>
                   </Table>
                 </TableContainer>
-                <TablePagination
-                  component="div"
-                  count={filteredServices.length}
-                  page={page}
-                  onPageChange={handleChangePage}
-                  rowsPerPage={rowsPerPage}
-                  onRowsPerPageChange={handleChangeRowsPerPage}
-                  rowsPerPageOptions={[5, 10, 25]}
-                />
               </>
             )}
           </Paper>
-        </Grid>
+        </Box>
 
-        {/* Selected service + beneficiaries */}
-        <Grid item xs={12} md={5}>
-          <Paper sx={{ p: 2, mb: 2 }} elevation={2}>
-            <Typography variant="h6" gutterBottom>
-              Service Details
-            </Typography>
-            {selectedService ? (
-              <>
-                <Typography variant="subtitle1">
-                  {selectedService.service_name}
-                </Typography>
-                <Typography variant="body2">
-                  Date:{' '}
-                  {selectedService.service_date
-                    ? formatDate(selectedService.service_date)
-                    : ''}
-                </Typography>
-                <Typography variant="body2">
-                  Location: {selectedService.location || ''}
-                </Typography>
-                <Typography variant="body2" sx={{ mt: 1 }}>
-                  {selectedService.description || <em>No description</em>}
-                </Typography>
-                <Box sx={{ mt: 2, display: 'flex', gap: 1, flexWrap: 'wrap' }}>
-                  <Button
-                    variant="outlined"
-                    size="small"
-                    onClick={openAddBeneficiaryDialog}
-                  >
-                    Add Beneficiary
-                  </Button>
-                  <Button
-                    variant="outlined"
-                    size="small"
-                    onClick={handleExportPdf}
-                    disabled={beneficiaries.length === 0}
-                  >
-                    Export PDF
-                  </Button>
-                  <Button
-                    variant="outlined"
-                    size="small"
-                    onClick={handleExportExcel}
-                    disabled={beneficiaries.length === 0}
-                  >
-                    Export Excel
-                  </Button>
+        {selectedService && (
+          <Box sx={{ flex: 1, minWidth: 200 }}>
+            <Paper sx={{ p: 2, position: 'relative' }} elevation={2}>
+              <Button 
+                onClick={() => {
+                  setSelectedService(null);
+                }}
+                sx={{
+                  position: 'absolute',
+                  top: '10px',
+                  right: '10px',
+                }}
+                >
+                  Close
+              </Button>
+              <Typography variant="h6" gutterBottom>Service Details</Typography>
+              <Box sx={{p: 2, border: '1px solid #ddd'}}>
+                <Box sx={{display: 'flex', justifyContent: 'space-between', mb: 1}}>
+                  <Typography fontWeight={'bold'} textAlign={'left'}>Name: </Typography>
+                  <Typography fontWeight={'regular'} textAlign={'right'}>{selectedService?.service_name}</Typography>
                 </Box>
-              </>
-            ) : (
-              <Typography variant="body2">
-                Select a service to view details and beneficiaries.
-              </Typography>
-            )}
-          </Paper>
+                <Box sx={{display: 'flex', justifyContent: 'space-between', mb: 1}}>
+                  <Typography fontWeight={'bold'} textAlign={'left'}>Date: </Typography>
+                  <Typography fontWeight={'regular'} textAlign={'right'}>{selectedService?.service_date ? formatDate(selectedService.service_date) : ''}</Typography>
+                </Box>
+                <Box sx={{display: 'flex', justifyContent: 'space-between', mb: 1}}>
+                  <Typography fontWeight={'bold'} textAlign={'left'}>Location: </Typography>
+                  <Typography fontWeight={'regular'} textAlign={'right'}>{selectedService?.location || ''}</Typography>
+                </Box>
+                <Box sx={{display: 'flex', justifyContent: 'space-between'}}>
+                  <Typography fontWeight={'bold'} textAlign={'left'}>Description: </Typography>
+                  <Typography fontWeight={'regular'} textAlign={'right'}>{selectedService?.description || <em>No description</em>}</Typography>
+                </Box>
+              </Box>
 
-          <Paper sx={{ p: 2 }} elevation={2}>
-            <Typography variant="h6" gutterBottom>
-              Beneficiaries
-            </Typography>
-            {loadingBeneficiaries ? (
-              <Typography>Loading beneficiaries...</Typography>
-            ) : beneficiaries.length === 0 ? (
-              <Typography variant="body2">
-                {selectedService
-                  ? 'No beneficiaries yet for this service.'
-                  : 'Select a service to view beneficiaries.'}
-              </Typography>
-            ) : (
-              <TableContainer>
-                <Table size="small">
-                  <TableHead>
-                    <TableRow>
-                      <TableCell>#</TableCell>
-                      <TableCell>Name</TableCell>
-                      <TableCell>Notes</TableCell>
-                      <TableCell align="center">Actions</TableCell>
-                    </TableRow>
-                  </TableHead>
-                  <TableBody>
-                    {beneficiaries.map((b, index) => (
-                      <TableRow key={b.id}>
-                        <TableCell>{index + 1}</TableCell>
-                        <TableCell>
-                          {b.last_name}, {b.first_name}
-                        </TableCell>
-                        <TableCell>{b.notes || ''}</TableCell>
-                        <TableCell align="center">
-                          <IconButton
-                            size="small"
-                            color="error"
-                            onClick={() => openDeleteBeneficiaryDialog(b)}
-                          >
-                            <DeleteIcon fontSize="small" />
-                          </IconButton>
-                        </TableCell>
+              <Box sx={{ mt: 2, display: 'flex', gap: 1, flexWrap: 'wrap' }}>
+                <Button
+                  variant="outlined"
+                  size="small"
+                  onClick={openAddBeneficiaryDialog}
+                >
+                  Add Beneficiary
+                </Button>
+                <Button
+                  variant="outlined"
+                  size="small"
+                  onClick={handleExportPdf}
+                  disabled={beneficiaries.length === 0}
+                >
+                  Export PDF
+                </Button>
+                <Button
+                  variant="outlined"
+                  size="small"
+                  onClick={handleExportExcel}
+                  disabled={beneficiaries.length === 0}
+                >
+                  Export Excel
+                </Button>
+              </Box>
+
+              <Divider sx={{ my: 2 }} />
+
+              <Typography variant="h6" gutterBottom>Beneficiaries</Typography>
+              {loadingBeneficiaries ? (
+                <Typography>Loading beneficiaries...</Typography>
+              ) : beneficiaries.length === 0 ? (
+                <Typography variant="body2">No beneficiaries yet for this service</Typography>
+              ) : (
+                <TableContainer
+                  sx={{
+                    maxHeight: '50vh',
+                    overflowX: 'auto',
+                    scrollbarWidth: 'none',
+                    '&:hover': {
+                      scrollbarWidth: 'thin',
+                      scrollbarColor: 'rgba(0,0,0,0.3) transparent',
+                    } 
+                  }}
+                  >
+                  <Table size="small">
+                    <TableHead>
+                      <TableRow>
+                        <TableCell>#</TableCell>
+                        <TableCell>Name</TableCell>
+                        <TableCell>Notes</TableCell>
+                        <TableCell align="center">Actions</TableCell>
                       </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
-              </TableContainer>
-            )}
-          </Paper>
-        </Grid>
-      </Grid>
+                    </TableHead>
+                    <TableBody>
+                      {beneficiaries.map((b, index) => (
+                        <TableRow key={b.id}>
+                          <TableCell>{index + 1}</TableCell>
+                          <TableCell>
+                            {b.last_name}, {b.first_name}
+                          </TableCell>
+                          <TableCell>{b.notes || ''}</TableCell>
+                          <TableCell align="center">
+                            <IconButton
+                              size="small"
+                              color="error"
+                              onClick={() => openDeleteBeneficiaryDialog(b)}
+                            >
+                              <DeleteIcon fontSize="small" />
+                            </IconButton>
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </TableContainer>
+              )}
+                
+            </Paper>
+          </Box>
+        )}
+      </Box>
 
       {/* Service dialog */}
       <Dialog

@@ -81,10 +81,6 @@ const IncidentsPage = () => {
   const [deleteTarget, setDeleteTarget] = useState(null);
   const [deleting, setDeleting] = useState(false);
 
-  // Pagination
-  const [page, setPage] = useState(0);
-  const [rowsPerPage, setRowsPerPage] = useState(10);
-
   const fetchResidents = async () => {
     try {
       const res = await api.get('/residents');
@@ -185,20 +181,6 @@ const IncidentsPage = () => {
     return matchFrom && matchTo && matchStatus && matchSearch && matchIncident;
   });
 
-  const pagedIncidents = filteredIncidents.slice(
-    page * rowsPerPage,
-    page * rowsPerPage + rowsPerPage
-  );
-
-  const handleChangePage = (event, newPage) => {
-    setPage(newPage);
-  };
-
-  const handleChangeRowsPerPage = (event) => {
-    setRowsPerPage(parseInt(event.target.value, 10));
-    setPage(0);
-  };
-
   // Edit
   const handleEditClick = (incident) => {
     setErrorEdit('');
@@ -278,7 +260,8 @@ const IncidentsPage = () => {
             disabled={addOpen} 
             onClick={() => handleAddClick()}
             size='large'
-            sx={{mb: 2, width: '100%'}}
+            sx={{mb: 2}}
+            fullWidth
             >
             Add Incident
           </Button>
@@ -365,7 +348,7 @@ const IncidentsPage = () => {
           </Paper>
         </Box>
 
-        <Box sx={{ flex: 2, minWidth: 200, height: '100%'}}>
+        <Box sx={{ flex: 1, minWidth: 200, height: '100%'}}>
           <Paper elevation={2}>
             <TableContainer
               sx={{

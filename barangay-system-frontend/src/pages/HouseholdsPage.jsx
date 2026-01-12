@@ -396,7 +396,7 @@ const HouseholdsPage = () => {
           </Paper>
         </Box>
 
-        <Box sx={{ flex: 1, minWidth: 200, height: '100%'}}>
+        <Box sx={{ flex: 2, minWidth: 200, height: '100%'}}>
           <Paper elevation={2}>
             <TableContainer
               sx={{
@@ -479,25 +479,29 @@ const HouseholdsPage = () => {
                   right: '10px',
                 }}
                 >
-                  Close</Button>
+                  Close
+              </Button>
               <Typography variant="h6" sx={{mb: 2}} gutterBottom>
                 Members of: {selectedHousehold.household_name} <br/> (ID:{' '}
                 {selectedHousehold.id})
               </Typography>
-              <Button
-                variant='contained' 
-                disabled={addOpen} 
-                onClick={() => handleAddMemberClick()}
-                size='large'
-                sx={{mb: 2, width: '100%'}}
-                >
-                Add Member
-              </Button>
-              <Divider sx={{ mb: 2 }} />
+
+              <Box sx={{ mt: 2, display: 'flex', gap: 1, flexWrap: 'wrap' }}>
+                <Button
+                  variant='outlined' 
+                  disabled={addOpen} 
+                  onClick={() => handleAddMemberClick()}
+                  size='small'
+                  >
+                  Add Member
+                </Button>
+              </Box>  
+              
+              <Divider sx={{ my: 2 }} />
 
               <TableContainer
                 sx={{
-                  maxHeight: '90vh',
+                  maxHeight: '50vh',
                   overflowX: 'auto',
                   scrollbarWidth: 'none',
                   '&:hover': {
