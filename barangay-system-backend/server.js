@@ -296,6 +296,8 @@ app.delete('/api/residents/:id', verifyToken, async (req, res) => {
   }
 });
 
+// IMPORT Resident xlsx
+
 // ===================== HOUSEHOLDS =====================
 
 // GET /api/households
