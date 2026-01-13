@@ -131,15 +131,16 @@ const App = () => {
       <Box sx={{ minHeight: '100vh', width: '100vw', bgcolor: '#f5f5f5' }}>
         <AppBar position="static" sx={{background: 'transparent', boxShadow: '0 1px #888888'}}>
           <Toolbar>
-            <Typography variant="h6" sx={{ flexGrow: 1, color: '#1976d2' }}>
-              Catmon Information System
+            <Typography variant="h6" sx={{ color: '#1976d2' }}>
+              CIS
             </Typography>
 
-            <ButtonGroup variant='text' aria-label="Basic button group">
+            <ButtonGroup variant='text' aria-label="Basic button group" sx={{flexGrow: 1, ml: 2, '& .MuiButtonGroup-grouped': { border: 'none' },}}>
               <Button
                 sx={{ 
                   color: page === 'residents' ? '#1976d2' : 'black', padding: '4px 8px',
-                  fontWeight: page === 'residents' ? '700' : '300'
+                  fontWeight: page === 'residents' ? '700' : '300',
+                  borderBottom: page === 'residents' ? '2px solid #1976d2' : 'none'
                  }}
                 startIcon={<PeopleIcon />}
                 onClick={() => setPage('residents')}
